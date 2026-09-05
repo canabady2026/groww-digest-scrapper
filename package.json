@@ -1,0 +1,9 @@
+{
+  "name": "groww-digest-scrapper",
+  "version": "1.0.0",
+  "description": "Google Apps Script that scrapes Groww Daily/Weekly Digest emails from Gmail into a Google Sheet.",
+  "private": true,
+  "scripts": {
+    "test": "node test/run.js"
+  }
+}

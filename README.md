@@ -1,0 +1,139 @@
+# Groww Digest Scrapper
+
+A Google Apps Script that reads your **Groww Daily Digest** (Mon–Fri) and
+**Groww Weekly Digest** (Sunday) emails out of Gmail and appends the
+structured content to a Google Sheet, one row per item.
+
+It relies on two Gmail labels you already have set up:
+
+| Digest | Gmail label |
+|---|---|
+| Daily Digest | `00-trading-1-groww-newsletter-digest` |
+| Weekly Digest | `00-trading-1-groww-world-history` |
+
+## What gets extracted
+
+**From the Daily Digest**, three sheets:
+
+| Sheet | Columns |
+|---|---|
+| `Word of the Day` | `date`, `word`, `short_description`, `description` |
+| `6 Day Course - Daily` | `date`, `theme`, `day`, `content` |
+| `Featured Question` | `date`, `question`, `answer` |
+
+**From the Weekly Digest**, two sheets:
+
+| Sheet | Columns |
+|---|---|
+| `Story` | `date`, `title`, `content`, `takeaway` |
+| `6 Day Course - Weekly` | `date`, `theme`, `question`, `option1`...`option5`, `answer` (one row per quiz question) |
+
+> The source spec names both course sheets "6 Day Course", but a sheet
+> tab name has to be unique per spreadsheet and the daily/weekly
+> versions have different columns (one day's lesson vs. the end-of-week
+> recap quiz), so they're named `6 Day Course - Daily` and
+> `6 Day Course - Weekly`. Rename them in `src/Config.gs` if you'd like
+> something else.
+
+Everything else in the emails (market tables, top gainers/losers, Quick
+Takes, stock news, etc.) is intentionally ignored — only the sections
+above are captured, per the spec.
+
+## How it works
+
+- `src/Utils.gs` — HTML→text conversion and date parsing helpers.
+- `src/DailyParser.gs` / `src/WeeklyParser.gs` — pure functions that turn
+  a digest's HTML body into structured data. These have **no** Gmail or
+  Sheets dependency, which is what lets them be unit tested under plain
+  Node (see [Testing](#testing) below).
+- `src/SheetHelpers.gs` — creates/reuses the destination spreadsheet and
+  sheets, and appends rows.
+- `src/Main.gs` — the entry points: `processDailyDigests()`,
+  `processWeeklyDigests()`, `runAll()`, plus one-time `setup()` and
+  `createDailyTrigger()` helpers.
+- `src/Config.gs` — label names, sheet names/columns, and the
+  once-per-run thread cap, all in one place.
+
+Each Gmail **thread** is labeled `groww-digest-processed` once its
+messages have been scraped, and the search query used to find new
+digests excludes that label — so re-running `runAll()` (e.g. via the
+daily trigger) never creates duplicate rows.
+
+## Setup
+
+1. **Create the Apps Script project.**
+   - Easiest: go to [script.google.com](https://script.google.com), create a
+     new project, and copy the contents of each file under `src/` into a
+     matching file in the editor (use the same filenames, e.g. `Config.gs`,
+     `Utils.gs`, etc.). Apps Script's default `Code.gs` can be deleted.
+   - Or, with [`clasp`](https://github.com/google/clasp) installed:
+     ```
+     npm install -g @google/clasp
+     clasp login
+     clasp create --title "Groww Digest Scrapper" --type standalone --rootDir src
+     ```
+     Then copy `.clasp.json.example` to `.clasp.json` (already gitignored)
+     and fill in the `scriptId` clasp printed, or the one `clasp create`
+     wrote for you. Push with `clasp push`.
+
+2. **Confirm your Gmail labels match** `00-trading-1-groww-newsletter-digest`
+   and `00-trading-1-groww-world-history` (these are exactly what's used in
+   the search queries). If yours differ, edit `DAILY_LABEL` /
+   `WEEKLY_LABEL` in `Config.gs`.
+
+3. **Run `setup` once** from the Apps Script editor (select `setup` in the
+   function dropdown, click Run). This will:
+   - Prompt you to authorize the Gmail (read/modify, for labeling) and
+     Sheets scopes.
+   - Create a new Google Sheet called "Groww Digest Data" (or reuse one
+     if you run `setup` again) and pre-create all five sheets with headers.
+   - Create the `groww-digest-processed` Gmail label.
+   - Log the spreadsheet URL — check **View > Logs** (or **Executions**)
+     for it.
+
+4. **Run `runAll` once manually** to do an initial backfill of whatever
+   digests are currently sitting under those labels.
+
+5. **Install the daily trigger** by running `createDailyTrigger` once.
+   This schedules `runAll()` to run once a day (default ~8pm, script
+   timezone `Asia/Kolkata` — change `timeZone` in `appsscript.json` and
+   the `.atHour(...)` call in `createDailyTrigger()` if you want a
+   different time). You can also add the trigger by hand from the
+   Apps Script editor's **Triggers** page instead.
+
+That's it — new Daily/Weekly Digest emails under those labels will be
+scraped into the sheet automatically going forward.
+
+## Testing
+
+`src/DailyParser.gs` and `src/WeeklyParser.gs` are plain, dependency-free
+JavaScript, so they're covered by a small Node test suite that runs them
+against two real (sanitized) Groww digest emails saved under
+`test/fixtures/`:
+
+```
+npm test
+```
+
+This is useful if Groww tweaks their email template and a parser needs
+adjusting — update the fixture (or add a new one) and re-run the parser
+against it before pushing changes back into the live Apps Script project.
+
+## Notes / limitations
+
+- Parsing is done via lightweight HTML→text conversion plus known
+  section headings ("Word of the Day", "6 Day Course", "Featured
+  Question", "Takeaways", "Quick Takes", "6-Day-Course", "Answers:",
+  etc.) rather than a full HTML/DOM parser (Apps Script doesn't ship
+  one). If Groww changes these headings or the overall template
+  structure, the corresponding parser will need updating — the Node
+  tests are there to make that safe to iterate on.
+- If a digest doesn't contain one of the tracked sections (e.g. the
+  daily template runs a week without a Featured Question), that row is
+  simply skipped for that email; the run continues and other sections
+  still get written. Check **Executions** in the Apps Script editor for
+  a log line when a section isn't found.
+- `MAX_THREADS_PER_RUN` (in `Config.gs`) caps how many unprocessed
+  threads are scraped per run, mainly to keep well within Apps Script's
+  execution time limit if a large backlog is processed in one go — just
+  run `runAll()` again to pick up the rest.

@@ -1,0 +1,137 @@
+/**
+ * Lightweight Node test runner for the pure parsing logic in src/*.gs.
+ *
+ * The .gs files are plain ES5 JavaScript (no Apps Script globals are
+ * referenced from Utils/DailyParser/WeeklyParser), so we can load them
+ * into a vm context and exercise them here without a real Gmail/Sheets
+ * environment. This is what gives us confidence the parsers actually
+ * work against real Groww digest HTML before they ever run in Apps
+ * Script.
+ *
+ * Run with: node test/run.js
+ */
+'use strict';
+
+const fs = require('fs');
+const path = require('path');
+const vm = require('vm');
+const assert = require('assert');
+
+function loadSandbox() {
+  const sandbox = {};
+  vm.createContext(sandbox);
+  const files = ['Utils.gs', 'DailyParser.gs', 'WeeklyParser.gs'];
+  for (const file of files) {
+    const code = fs.readFileSync(path.join(__dirname, '..', 'src', file), 'utf8');
+    vm.runInContext(code, sandbox, { filename: file });
+  }
+  return sandbox;
+}
+
+function readFixture(name) {
+  return fs.readFileSync(path.join(__dirname, 'fixtures', name), 'utf8');
+}
+
+let passed = 0;
+let failed = 0;
+
+function test(name, fn) {
+  try {
+    fn();
+    passed++;
+    console.log('  ok - ' + name);
+  } catch (err) {
+    failed++;
+    console.log('  FAIL - ' + name);
+    console.log('    ' + err.message);
+  }
+}
+
+const sandbox = loadSandbox();
+
+console.log('Daily digest parser');
+(function () {
+  const html = readFixture('daily-2026-09-04.html');
+  const result = sandbox.parseDailyDigest(html, new Date(2026, 8, 4));
+
+  test('extracts the digest date from the body', () => {
+    assert.strictEqual(result.date.getFullYear(), 2026);
+    assert.strictEqual(result.date.getMonth(), 8); // September
+    assert.strictEqual(result.date.getDate(), 4);
+  });
+
+  test('extracts Word of the Day', () => {
+    assert.ok(result.wordOfTheDay, 'expected wordOfTheDay to be present');
+    assert.strictEqual(result.wordOfTheDay.word, 'MSCI Global Index');
+    assert.strictEqual(
+      result.wordOfTheDay.shortDescription,
+      'It is an index maintained by MSCI that is made up of large and mid cap stocks'
+    );
+    assert.ok(result.wordOfTheDay.description.indexOf('global') !== -1);
+    assert.ok(result.wordOfTheDay.description.indexOf('index funds') !== -1 ||
+      result.wordOfTheDay.description.indexOf('Index funds') !== -1);
+  });
+
+  test('extracts 6 Day Course theme, day and content', () => {
+    assert.ok(result.sixDayCourse, 'expected sixDayCourse to be present');
+    assert.strictEqual(result.sixDayCourse.theme, 'strategies of long-term investing');
+    assert.strictEqual(result.sixDayCourse.day, 'Friday');
+    assert.ok(result.sixDayCourse.content.indexOf('Contrarian investing') !== -1);
+    assert.ok(result.sixDayCourse.content.indexOf('Mon') === -1, 'weekday selector row should be stripped');
+  });
+
+  test('extracts Featured Question and answer', () => {
+    assert.ok(result.featuredQuestion, 'expected featuredQuestion to be present');
+    assert.ok(result.featuredQuestion.question.indexOf('buyer and seller are available') !== -1);
+    assert.ok(result.featuredQuestion.answer.indexOf('illiquid') !== -1);
+  });
+})();
+
+console.log('Weekly digest parser');
+(function () {
+  const html = readFixture('weekly-2026-08-30.html');
+  const subject = '130+ year old stock becomes multi-bagger';
+  const result = sandbox.parseWeeklyDigest(html, subject, new Date(2026, 7, 30));
+
+  test('extracts the digest date from the body', () => {
+    assert.strictEqual(result.date.getFullYear(), 2026);
+    assert.strictEqual(result.date.getMonth(), 7); // August
+    assert.strictEqual(result.date.getDate(), 30);
+  });
+
+  test('extracts the Story with title, content and takeaway', () => {
+    assert.ok(result.story, 'expected story to be present');
+    assert.strictEqual(result.story.title, subject);
+    assert.ok(result.story.content.indexOf('Texas Pacific') !== -1);
+    assert.ok(result.story.content.indexOf('Takeaways') === -1, 'content should not bleed into takeaway section');
+    assert.ok(result.story.takeaway.indexOf('fundamental research') !== -1);
+    assert.ok(result.story.takeaway.indexOf('Quick Takes') === -1, 'takeaway should not bleed into Quick Takes');
+  });
+
+  test('extracts 6 Day Course quiz with theme, questions, options and answers', () => {
+    assert.ok(result.sixDayCourse, 'expected sixDayCourse to be present');
+    assert.strictEqual(result.sixDayCourse.theme, 'quarterly reports');
+    assert.strictEqual(result.sixDayCourse.questions.length, 5);
+
+    const q1 = result.sixDayCourse.questions[0];
+    assert.strictEqual(q1.question, 'How many reports must listed companies in India publish?');
+    // q1.options is an Array from the vm sandbox's own realm, so its
+    // constructor differs from this file's Array -- compare via JSON
+    // instead of deepStrictEqual to avoid a spurious cross-realm failure.
+    assert.strictEqual(
+      JSON.stringify(q1.options),
+      JSON.stringify(['Quarterly (4 reports)', 'Annual (1 report)', 'Not mandatory'])
+    );
+    assert.strictEqual(q1.answer, 'Quarterly (4 reports)');
+
+    const q4 = result.sixDayCourse.questions[3];
+    assert.strictEqual(q4.options.length, 4);
+    assert.strictEqual(q4.answer, '2 working days');
+
+    const q5 = result.sixDayCourse.questions[4];
+    assert.strictEqual(q5.answer, 'Telecom sector companies');
+  });
+})();
+
+console.log('\n' + passed + ' passed, ' + failed + ' failed');
+process.exit(failed > 0 ? 1 : 0);
