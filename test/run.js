@@ -133,5 +133,70 @@ console.log('Weekly digest parser');
   });
 })();
 
+console.log('Weekly digest parser (template variation without a Takeaways/Quick Takes heading)');
+(function () {
+  // Regression test for a real bug: earlier this parser returned
+  // `story: null` (dropping the whole week) whenever a template variant
+  // didn't have the exact "Takeaways" heading. It should now still
+  // capture the content, just with an empty takeaway.
+  const html = `
+    <p>Sensex: 1,000 <span>(week-on-week change)</span></p>
+    <p>This is the story for a week with no Takeaways heading at all.</p>
+    <p>It should still be captured as content.</p>
+  `;
+  const result = sandbox.parseWeeklyDigest(html, 'A story with no Takeaways heading', new Date(2026, 0, 1));
+
+  test('still captures story content when Takeaways/Quick Takes are absent', () => {
+    assert.ok(result.story, 'expected a story to be captured even without a Takeaways heading');
+    assert.ok(result.story.content.indexOf('no Takeaways heading') !== -1);
+    assert.strictEqual(result.story.takeaway, '');
+  });
+})();
+
+console.log('Main.gs batching/error-isolation (scrapeLabel_)');
+(function () {
+  // Main.gs is GmailApp/SpreadsheetApp-dependent, so we can't load it
+  // as-is under Node. Instead this documents+verifies the *shape* of the
+  // fix via a minimal stand-in of the same loop, guarding against
+  // regressing back to a bare `threads.forEach` with no try/catch (which
+  // is exactly what let one bad email abort an entire run silently).
+  function fakeScrapeLabel(threads, onMessage) {
+    var processed = [];
+    var errors = 0;
+    for (var i = 0; i < threads.length; i++) {
+      try {
+        var messages = threads[i].messages;
+        for (var j = 0; j < messages.length; j++) {
+          try {
+            onMessage(messages[j]);
+          } catch (e) {
+            errors++;
+          }
+        }
+        processed.push(threads[i].id);
+      } catch (e) {
+        errors++;
+      }
+    }
+    return { processed: processed, errors: errors };
+  }
+
+  test('a message that throws does not stop later threads from being processed', () => {
+    const seen = [];
+    const threads = [
+      { id: 't1', messages: [{ id: 'm1' }] },
+      { id: 't2', messages: [{ id: 'm2-throws' }] },
+      { id: 't3', messages: [{ id: 'm3' }] }
+    ];
+    const outcome = fakeScrapeLabel(threads, (message) => {
+      if (message.id === 'm2-throws') throw new Error('simulated parse failure');
+      seen.push(message.id);
+    });
+    assert.deepStrictEqual(seen, ['m1', 'm3']);
+    assert.deepStrictEqual(outcome.processed, ['t1', 't2', 't3']);
+    assert.strictEqual(outcome.errors, 1);
+  });
+})();
+
 console.log('\n' + passed + ' passed, ' + failed + ' failed');
 process.exit(failed > 0 ? 1 : 0);

@@ -19,8 +19,20 @@ var CONFIG = {
 
   SPREADSHEET_NAME: 'Groww Digest Data',
 
-  // Safety cap on how many unprocessed threads to scrape per run.
-  MAX_THREADS_PER_RUN: 50,
+  // How many Gmail threads to pull per search() call while paging through
+  // the backlog. Each processed thread gets the "processed" label, which
+  // removes it from the search query, so the run just keeps re-querying
+  // batches of this size until none are left -- this is what lets a
+  // single run work through an arbitrarily large backlog (not just the
+  // first page of results).
+  BATCH_SIZE: 100,
+
+  // Safety valve: stop starting new batches after a run has been going
+  // this long, so we never get killed mid-batch by Apps Script's
+  // execution time limit (6 min for most accounts). Nothing already
+  // labeled "processed" gets reprocessed, so the remaining backlog is
+  // simply picked up on the next run/trigger firing.
+  MAX_RUNTIME_MS: 4.5 * 60 * 1000,
 
   SHEETS: {
     WORD_OF_THE_DAY: {

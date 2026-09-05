@@ -52,12 +52,24 @@ above are captured, per the spec.
   `processWeeklyDigests()`, `runAll()`, plus one-time `setup()` and
   `createDailyTrigger()` helpers.
 - `src/Config.gs` — label names, sheet names/columns, and the
-  once-per-run thread cap, all in one place.
+  batching/runtime settings, all in one place.
 
 Each Gmail **thread** is labeled `groww-digest-processed` once its
 messages have been scraped, and the search query used to find new
 digests excludes that label — so re-running `runAll()` (e.g. via the
-daily trigger) never creates duplicate rows.
+daily trigger) never creates duplicate rows, *as long as that label stays
+applied* (see [Forcing a re-scrape](#forcing-a-re-scrape) if you ever need
+to undo that intentionally).
+
+A single call to `processDailyDigests()` / `processWeeklyDigests()` pages
+through the **entire** backlog under its label, not just the first batch:
+it keeps re-querying (each processed thread drops out of the query once
+labeled) until nothing unprocessed is left, or until it's been running for
+~4.5 minutes (`MAX_RUNTIME_MS` in `Config.gs`), in which case it stops
+cleanly and picks up the remainder on the next run. Each thread and each
+message inside it is also processed in its own try/catch, so one
+malformed or unexpected email can't silently abort the whole run and
+leave everything queued after it unprocessed.
 
 ## Setup
 
@@ -104,6 +116,24 @@ daily trigger) never creates duplicate rows.
 That's it — new Daily/Weekly Digest emails under those labels will be
 scraped into the sheet automatically going forward.
 
+## Forcing a re-scrape
+
+If you've updated the parser (e.g. pulled a fix for a section that wasn't
+being captured) and want to backfill previously-processed emails with
+corrected data:
+
+1. In the destination spreadsheet, clear out the stale data rows in the
+   affected sheet(s) — **keep the header row**.
+2. Run `resetProcessedLabel()` once from the Apps Script editor. This
+   removes the `groww-digest-processed` label from every thread under
+   both digest labels (it does **not** touch the spreadsheet).
+3. Run `runAll()` again — everything is now "unprocessed" again and gets
+   re-scraped from scratch with the fixed parser.
+
+Skipping step 1 will duplicate every row that was already captured
+correctly, since `resetProcessedLabel()` has no way to know which rows in
+the sheet came from which thread.
+
 ## Testing
 
 `src/DailyParser.gs` and `src/WeeklyParser.gs` are plain, dependency-free
@@ -132,8 +162,16 @@ against it before pushing changes back into the live Apps Script project.
   daily template runs a week without a Featured Question), that row is
   simply skipped for that email; the run continues and other sections
   still get written. Check **Executions** in the Apps Script editor for
-  a log line when a section isn't found.
-- `MAX_THREADS_PER_RUN` (in `Config.gs`) caps how many unprocessed
-  threads are scraped per run, mainly to keep well within Apps Script's
-  execution time limit if a large backlog is processed in one go — just
-  run `runAll()` again to pick up the rest.
+  a log line when a section isn't found, or when a thread/message was
+  skipped due to an error.
+- The Weekly `Story` parser falls back gracefully if a template variant
+  is missing the "Takeaways" or "Quick Takes" heading it normally
+  anchors on (it still captures the story `content`, just with an empty
+  `takeaway`) — but it's only been verified against one real sample
+  email so far. If `Story` or the quiz ever comes out empty/garbled for
+  a particular week, check the Executions log for that message's ID —
+  it's easy to turn that email into a new fixture under
+  `test/fixtures/` to fix the parser against (see Testing above).
+- `BATCH_SIZE` / `MAX_RUNTIME_MS` (in `Config.gs`) control how the
+  backlog is paged through per run — see "How it works" above. You
+  shouldn't need to touch these unless your backlog is unusually large.

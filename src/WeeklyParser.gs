@@ -22,15 +22,27 @@ function parseWeeklyDigest(html, subject, fallbackDate) {
   if (headerEndIdx === -1) headerEndIdx = 0;
 
   var takeawaysIdx = findLineIndex(lines, 'Takeaways', headerEndIdx, false);
-  var quickTakesIdx = takeawaysIdx !== -1
-    ? findLineIndex(lines, 'Quick Takes', takeawaysIdx, false)
-    : -1;
+  var quickTakesIdx = findLineIndex(lines, 'Quick Takes', headerEndIdx, false);
+  var sixIdxForBound = findLineIndex(lines, '6-Day-Course', headerEndIdx, true);
 
+  // Prefer the "Takeaways" heading as the end of the story content, but
+  // fall back to whichever of the later section markers we can find so a
+  // template variation that skips/renames one heading still yields a
+  // (possibly takeaway-less) story instead of nothing at all.
+  var storyEnd = takeawaysIdx !== -1 ? takeawaysIdx
+    : (quickTakesIdx !== -1 ? quickTakesIdx
+      : (sixIdxForBound !== -1 ? sixIdxForBound : lines.length));
+
+  var contentLines = cleanSectionLines_(lines.slice(headerEndIdx + 1, storyEnd));
+
+  var takeawayLines = [];
   if (takeawaysIdx !== -1) {
-    var contentLines = cleanSectionLines_(lines.slice(headerEndIdx + 1, takeawaysIdx));
-    var takeawayEnd = quickTakesIdx !== -1 ? quickTakesIdx : lines.length;
-    var takeawayLines = cleanSectionLines_(lines.slice(takeawaysIdx + 1, takeawayEnd));
+    var takeawayEnd = quickTakesIdx !== -1 && quickTakesIdx > takeawaysIdx ? quickTakesIdx
+      : (sixIdxForBound !== -1 ? sixIdxForBound : lines.length);
+    takeawayLines = cleanSectionLines_(lines.slice(takeawaysIdx + 1, takeawayEnd));
+  }
 
+  if (contentLines.length > 0) {
     result.story = {
       title: title,
       content: contentLines.join(' '),
@@ -38,7 +50,7 @@ function parseWeeklyDigest(html, subject, fallbackDate) {
     };
   }
 
-  var sixIdx = findLineIndex(lines, '6-Day-Course', quickTakesIdx !== -1 ? quickTakesIdx : 0, true);
+  var sixIdx = findLineIndex(lines, '6-Day-Course', quickTakesIdx !== -1 ? quickTakesIdx : headerEndIdx, true);
   if (sixIdx !== -1) {
     var sixEnd = findLineIndex(lines, 'Did you enjoy this issue', sixIdx, true);
     if (sixEnd === -1) sixEnd = lines.length;
