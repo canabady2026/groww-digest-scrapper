@@ -108,6 +108,22 @@ console.log('Weekly digest parser');
     assert.ok(result.story.takeaway.indexOf('Quick Takes') === -1, 'takeaway should not bleed into Quick Takes');
   });
 
+  test('Story content/takeaway preserve paragraph breaks and bold sub-headers as minimal HTML', () => {
+    // Regression test: content/takeaway used to be flattened into one
+    // giant space-joined line, making a long story unreadable. Each
+    // Groww paragraph should now be its own <p>, and the story's bold
+    // sub-headers (Earnings, Discovery, ...) should survive as <strong>.
+    assert.ok(result.story.content.indexOf('<p>The story starts in 1888.</p>') !== -1);
+    assert.ok(result.story.content.indexOf('<p><strong>Earnings</strong></p>') !== -1);
+    assert.ok(result.story.content.indexOf('<p><strong>Discovery</strong></p>') !== -1);
+    // No leftover raw attributes/ids/styles from the source markup, and
+    // no other tags besides the whitelisted <p>/<strong>.
+    assert.strictEqual(/<(?!\/?(?:p|strong)\b)[a-z][^>]*>/i.test(result.story.content), false);
+    assert.strictEqual(/style=|id=|class=/i.test(result.story.content), false);
+
+    assert.ok(result.story.takeaway.indexOf('<p>One of the most important takeaways') !== -1);
+  });
+
   test('extracts 6 Day Course quiz with theme, questions, options and answers', () => {
     assert.ok(result.sixDayCourse, 'expected sixDayCourse to be present');
     assert.strictEqual(result.sixDayCourse.theme, 'quarterly reports');

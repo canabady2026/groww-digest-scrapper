@@ -6,9 +6,9 @@
  * GmailApp / SpreadsheetApp calls, so it can run under Node for testing.
  */
 function parseWeeklyDigest(html, subject, fallbackDate) {
-  var text = htmlToText(html);
-  var lines = toLines(text);
-  var date = parseDateFromText(text, fallbackDate);
+  var blocks = htmlToParagraphs(html);
+  var lines = blocks.map(function (b) { return b.text; });
+  var date = parseDateFromText(lines.join('\n'), fallbackDate);
 
   var result = {
     date: date,
@@ -33,20 +33,20 @@ function parseWeeklyDigest(html, subject, fallbackDate) {
     : (quickTakesIdx !== -1 ? quickTakesIdx
       : (sixIdxForBound !== -1 ? sixIdxForBound : lines.length));
 
-  var contentLines = cleanSectionLines_(lines.slice(headerEndIdx + 1, storyEnd));
+  var contentHtml = blocksToHtml_(blocks.slice(headerEndIdx + 1, storyEnd));
 
-  var takeawayLines = [];
+  var takeawayHtml = '';
   if (takeawaysIdx !== -1) {
     var takeawayEnd = quickTakesIdx !== -1 && quickTakesIdx > takeawaysIdx ? quickTakesIdx
       : (sixIdxForBound !== -1 ? sixIdxForBound : lines.length);
-    takeawayLines = cleanSectionLines_(lines.slice(takeawaysIdx + 1, takeawayEnd));
+    takeawayHtml = blocksToHtml_(blocks.slice(takeawaysIdx + 1, takeawayEnd));
   }
 
-  if (contentLines.length > 0) {
+  if (contentHtml) {
     result.story = {
       title: title,
-      content: contentLines.join(' '),
-      takeaway: takeawayLines.join(' ')
+      content: contentHtml,
+      takeaway: takeawayHtml
     };
   }
 
@@ -81,12 +81,20 @@ function parseWeeklyDigest(html, subject, fallbackDate) {
   return result;
 }
 
-function cleanSectionLines_(lines) {
-  return lines.filter(function (line) {
-    if (line === '[[HR]]') return false;
-    if (/^\[\[DAY:\w+\]\]$/.test(line)) return false;
-    return true;
-  });
+/**
+ * Turns a slice of htmlToParagraphs() blocks into a single HTML string,
+ * one <p> per block, dropping the [[HR]]/[[DAY:...]] sentinel blocks
+ * (identified via each block's plain-text .text, same as the old
+ * plain-text pipeline used to). This is what lets the Weekly Story's
+ * `content`/`takeaway` keep Groww's own paragraph breaks and bold
+ * sub-headers (e.g. "Earnings", "Discovery") instead of collapsing into
+ * one run-on line.
+ */
+function blocksToHtml_(blocks) {
+  return blocks
+    .filter(function (b) { return b.text !== '[[HR]]' && !/^\[\[DAY:\w+\]\]$/.test(b.text); })
+    .map(function (b) { return '<p>' + b.html + '</p>'; })
+    .join('');
 }
 
 function parseQuizQuestions_(lines) {

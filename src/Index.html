@@ -251,6 +251,25 @@
     white-space: pre-wrap;
     margin: 0;
   }
+  /* Story's content/takeaway render as a <div> of real <p>/<strong>
+     elements (see renderListSlide), not a single pre-wrapped text
+     block -- these give each paragraph breathing room and turn Groww's
+     bold sub-headers (Earnings, Discovery, ...) into little section
+     headings instead of inline bold text. */
+  .modal-body p {
+    margin: 0 0 14px;
+  }
+  .modal-body p:last-child {
+    margin-bottom: 0;
+  }
+  .modal-body strong {
+    display: block;
+    margin-top: 22px;
+    font-size: 1.05em;
+  }
+  .modal-body p:first-child strong {
+    margin-top: 0;
+  }
   .modal-callout {
     margin-top: 22px;
     background: var(--accent-bg);
@@ -266,9 +285,12 @@
     margin-bottom: 8px;
   }
   .modal-callout p {
-    margin: 0;
+    margin: 0 0 10px;
     font-size: 17px;
     line-height: 1.6;
+  }
+  .modal-callout p:last-child {
+    margin-bottom: 0;
   }
   .modal-options { list-style: none; padding: 0; margin: 0 0 4px; }
   .modal-options .option {
@@ -409,6 +431,10 @@
     return str.length > n ? str.slice(0, n).trim() + '…' : str;
   }
 
+  function stripTags(html) {
+    return String(html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+
   function currentTab() {
     return tabs.filter(function (t) { return t.key === activeTabKey; })[0];
   }
@@ -524,7 +550,10 @@
     contentEl.className = 'list';
     contentEl.innerHTML = items.map(function (row, i) {
       var title = activeTabKey === 'STORY' ? row.title : ('Q. ' + row.question);
-      var excerpt = activeTabKey === 'STORY' ? row.content : row.answer;
+      // Story's content is HTML (see openListModal/renderListSlide); strip
+      // tags for the plain-text list excerpt rather than truncating raw
+      // HTML, which could cut mid-tag and show broken markup as text.
+      var excerpt = activeTabKey === 'STORY' ? stripTags(row.content) : row.answer;
       return '' +
         '<div class="list-item" data-i="' + i + '">' +
         '<div class="list-item-date">' + esc(row.date) + '</div>' +
@@ -585,11 +614,16 @@
         '<h2 class="modal-title">Q. ' + esc(row.question) + '</h2>' +
         '<p class="modal-body">' + esc(row.answer) + '</p>';
     } else if (modalTabKey === 'STORY') {
+      // row.content / row.takeaway are pre-sanitized HTML (only <p>/
+      // <strong>, no attributes) produced by WeeklyParser.gs, so they're
+      // rendered directly rather than escaped -- that's what preserves
+      // Groww's own paragraph breaks and bold sub-headers (Earnings,
+      // Discovery, ...) instead of one run-on line of text.
       modalContentEl.innerHTML = '' +
         '<div class="modal-date">' + esc(row.date) + '</div>' +
         '<h2 class="modal-title">' + esc(row.title) + '</h2>' +
-        '<p class="modal-body">' + esc(row.content) + '</p>' +
-        (row.takeaway ? '<div class="modal-callout"><strong>Takeaways</strong><p>' + esc(row.takeaway) + '</p></div>' : '');
+        '<div class="modal-body">' + (row.content || '') + '</div>' +
+        (row.takeaway ? '<div class="modal-callout"><strong>Takeaways</strong>' + row.takeaway + '</div>' : '');
     }
   }
 

@@ -75,6 +75,51 @@ function htmlToText(html) {
 }
 
 /**
+ * Like htmlToText, but returns an array of { text, html } blocks (one
+ * per paragraph/line boundary) instead of a single flattened string --
+ * `text` is the same plain text htmlToText would produce for that block,
+ * `html` is a minimal, sanitized version keeping only <strong>/<em>
+ * (attributes stripped, everything else removed) so a long section like
+ * the Weekly Story can be rendered with its original paragraph breaks
+ * and bold sub-headers instead of one run-on block of text.
+ *
+ * The two are split at exactly the same points, so `blocks.map(b =>
+ * b.text)` is index-for-index identical to `toLines(htmlToText(html))`
+ * -- callers can find section boundaries using the plain `.text` field
+ * with the existing findLineIndex()-based logic, then use those same
+ * indices to slice `.html` for display.
+ */
+function htmlToParagraphs(html) {
+  var text = html;
+  text = text.replace(/<style[\s\S]*?<\/style>/gi, ' ');
+  text = text.replace(/<script[\s\S]*?<\/script>/gi, ' ');
+  text = text.replace(/<!--\s*(\w+)\s*Start\s*-->/gi, '\n[[DAY:$1]]\n');
+  text = text.replace(/<!--\s*\w+\s*End\s*-->/gi, '\n');
+  text = text.replace(/<!--[\s\S]*?-->/g, ' ');
+  text = text.replace(/<hr\b[^>]*>/gi, '\n[[HR]]\n');
+  text = text.replace(/<br\s*\/?>/gi, '\n');
+  text = text.replace(/<\/(p|div|li|tr|h[1-6]|table)>/gi, '\n');
+
+  return text.split('\n').map(function (rawBlock) {
+    var plain = decodeHtmlEntities(rawBlock.replace(/<[^>]+>/g, ''))
+      .replace(/‌/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    var minimalHtml = rawBlock
+      .replace(/<(\/?)(strong|b)\b[^>]*>/gi, '<$1strong>')
+      .replace(/<(\/?)(em|i)\b[^>]*>/gi, '<$1em>');
+    minimalHtml = minimalHtml.replace(/<(?!\/?(?:strong|em)\b)[^>]+>/gi, '');
+    minimalHtml = decodeHtmlEntities(minimalHtml)
+      .replace(/‌/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    return { text: plain, html: minimalHtml };
+  }).filter(function (block) { return block.text.length > 0; });
+}
+
+/**
  * Splits converted text into trimmed, non-empty lines.
  */
 function toLines(text) {
