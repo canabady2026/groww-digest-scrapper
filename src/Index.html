@@ -76,9 +76,15 @@
     outline-offset: -1px;
   }
   main {
-    max-width: 720px;
-    margin: 0 auto;
     padding: 8px 16px 32px;
+  }
+  /* List-style tabs stay at a comfortable reading width and center
+     themselves; the tile grid (below) is exempt so it can fill the
+     window on wide screens. */
+  .list, .status {
+    max-width: 720px;
+    margin-left: auto;
+    margin-right: auto;
   }
   .status {
     text-align: center;
@@ -90,7 +96,7 @@
   /* Tiles (Word of the Day) */
   .tile-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 12px;
   }
   .tile {
@@ -183,9 +189,12 @@
   .modal {
     background: var(--card-bg);
     border-radius: 18px;
-    width: 100%;
-    max-width: 600px;
-    max-height: 88vh;
+    /* A fixed footprint (not max-width/max-height) so the popup doesn't
+       grow or shrink to fit each card's content -- short and long
+       entries get the same box, with the content area scrolling
+       internally when it doesn't fit. */
+    width: min(920px, 94vw);
+    height: min(720px, 88vh);
     display: flex;
     flex-direction: column;
     position: relative;
@@ -206,6 +215,8 @@
     z-index: 1;
   }
   .modal-content {
+    flex: 1 1 auto;
+    min-height: 0; /* let it shrink below content size so overflow-y actually scrolls */
     overflow-y: auto;
     padding: 32px 28px 12px;
   }
