@@ -54,8 +54,11 @@ above are captured, per the spec.
 - `src/Config.gs` — label names, sheet names/columns, and the
   batching/runtime settings, all in one place.
 - `src/WebApp.gs` / `src/Index.html` — a read-only web app for browsing
-  the scraped data as swipeable cards, one tab per sheet (see
+  the scraped data (see
   [Browsing the data as a web app](#browsing-the-data-as-a-web-app)).
+- `src/SixDayCourseGrouping.gs` — pure function that groups the Daily and
+  Weekly "6 Day Course" sheets into one per-week entry for the web app;
+  no Sheets/Gmail dependency, so it's unit tested under Node too.
 
 Each Gmail **thread** is labeled `groww-digest-processed` once its
 messages have been scraped, and the search query used to find new
@@ -139,18 +142,43 @@ the sheet came from which thread.
 
 ## Browsing the data as a web app
 
-`src/WebApp.gs` + `src/Index.html` serve a small read-only page with one
-tab per sheet, and cards you browse with ‹ › buttons, arrow keys, or a
-swipe (newest first, like flipping through your inbox).
+`src/WebApp.gs` + `src/Index.html` serve a small read-only page, one tab
+per sheet:
+
+| Tab | Layout | Popup |
+|---|---|---|
+| Word of the Day | tile grid | large-font card, cyclic ‹ › through the (filtered) tiles |
+| 6 Day Course | list, one row per week (theme + Mon-Sun pill row showing which days have data) | day badges (Mon-Fri + a Sunday "recap" badge showing that week's quiz) at the top, cyclic ‹ › steps through the 6 badges |
+| Featured Question | list | cyclic ‹ › through the (filtered) list |
+| Story | list | cyclic ‹ › through the (filtered) list |
+
+"Cyclic" means ‹ › (and arrow keys / swipe) wrap around at the ends
+instead of stopping — last item's "next" goes back to the first.
+
+Every tab has a search box in the header that filters its tiles/list by
+substring match across that tab's text fields (for 6 Day Course, matching
+the theme or any day's/quiz's content still surfaces the whole week).
+The 6 Day Course tab groups the Daily sheet's Mon-Fri rows together with
+the Weekly sheet's Sunday quiz by **calendar week** (`SixDayCourseGrouping.gs`,
+unit tested under Node) rather than by matching the `theme` text verbatim,
+so it lines up correctly even if Groww's wording drifts slightly between
+the daily and weekly templates.
+
+The manifest (`src/appsscript.json`) sets `"access": "ANYONE_ANONYMOUS"` —
+**the deployed URL is fully public: anyone who has it can view your
+scraped digest content, no Google login required.** Change it back to
+`"MYSELF"` (redeploy after) if you'd rather it stay private to your own
+Google account.
 
 To deploy it:
 
 1. In the Apps Script editor: **Deploy > New deployment**.
 2. Click the gear icon next to "Select type" and choose **Web app**.
-3. Set **Execute as: Me**, **Who has access: Only myself** (change this
-   later if you want to share the link — "Only myself" just means it
-   checks your Google identity, so it still works from your phone or any
-   other device as long as you're signed into the same account).
+3. Set **Execute as: Me**, and **Who has access** to match whatever
+   `appsscript.json` currently has (**Anyone** for the public default
+   above, or **Only myself** if you changed it back — "Only myself" checks
+   your Google identity, so it still works from your phone or any other
+   device as long as you're signed into the same account).
 4. Click **Deploy**, then copy the web app URL it gives you.
 
 Or, with clasp already set up (see Setup above):

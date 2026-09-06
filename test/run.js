@@ -20,7 +20,7 @@ const assert = require('assert');
 function loadSandbox() {
   const sandbox = {};
   vm.createContext(sandbox);
-  const files = ['Utils.gs', 'DailyParser.gs', 'WeeklyParser.gs'];
+  const files = ['Utils.gs', 'DailyParser.gs', 'WeeklyParser.gs', 'SixDayCourseGrouping.gs'];
   for (const file of files) {
     const code = fs.readFileSync(path.join(__dirname, '..', 'src', file), 'utf8');
     vm.runInContext(code, sandbox, { filename: file });
@@ -195,6 +195,64 @@ console.log('Main.gs batching/error-isolation (scrapeLabel_)');
     assert.deepStrictEqual(seen, ['m1', 'm3']);
     assert.deepStrictEqual(outcome.processed, ['t1', 't2', 't3']);
     assert.strictEqual(outcome.errors, 1);
+  });
+})();
+
+console.log('groupSixDayCourse (web app grouping)');
+(function () {
+  function dailyRow(y, m, d, day, theme, content) {
+    return { date: new Date(y, m, d), theme: theme, day: day, content: content };
+  }
+  function weeklyRow(y, m, d, theme, question, options, answer) {
+    const row = { date: new Date(y, m, d), theme: theme, question: question, answer: answer };
+    options.forEach((opt, i) => { row['option' + (i + 1)] = opt; });
+    return row;
+  }
+
+  test('groups a Mon-Fri run with its Sunday quiz by calendar week', () => {
+    // 31 Aug 2026 = Monday, 4 Sep 2026 = Friday, 6 Sep 2026 = Sunday.
+    const daily = [
+      dailyRow(2026, 7, 31, 'Monday', 'strategies of long-term investing', 'Mon content'),
+      dailyRow(2026, 8, 1, 'Tuesday', 'strategies of long-term investing', 'Tue content'),
+      dailyRow(2026, 8, 4, 'Friday', 'strategies of long-term investing', 'Fri content')
+    ];
+    const weekly = [
+      weeklyRow(2026, 8, 6, 'strategies of long-term investing', 'Q1?', ['A', 'B'], 'A')
+    ];
+
+    const groups = sandbox.groupSixDayCourse(daily, weekly);
+    assert.strictEqual(groups.length, 1);
+    assert.strictEqual(groups[0].theme, 'strategies of long-term investing');
+    assert.strictEqual(groups[0].days.Monday.content, 'Mon content');
+    assert.strictEqual(groups[0].days.Friday.content, 'Fri content');
+    assert.strictEqual(groups[0].days.Wednesday, undefined);
+    assert.strictEqual(groups[0].sundayQuestions.length, 1);
+    assert.strictEqual(groups[0].sundayQuestions[0].question, 'Q1?');
+    assert.strictEqual(JSON.stringify(groups[0].sundayQuestions[0].options), JSON.stringify(['A', 'B']));
+    // 6 Sep 2026.
+    assert.strictEqual(groups[0].sundayDate.getFullYear(), 2026);
+    assert.strictEqual(groups[0].sundayDate.getMonth(), 8);
+    assert.strictEqual(groups[0].sundayDate.getDate(), 6);
+  });
+
+  test('keeps separate weeks apart and sorts newest-first', () => {
+    const daily = [
+      dailyRow(2026, 7, 24, 'Monday', 'week one theme', 'W1 Mon'), // week ending 30 Aug
+      dailyRow(2026, 7, 31, 'Monday', 'week two theme', 'W2 Mon')  // week ending 6 Sep
+    ];
+    const groups = sandbox.groupSixDayCourse(daily, []);
+    assert.strictEqual(groups.length, 2);
+    assert.strictEqual(groups[0].theme, 'week two theme', 'newest week should come first');
+    assert.strictEqual(groups[1].theme, 'week one theme');
+  });
+
+  test('a week with only a Sunday quiz (no daily rows) still groups', () => {
+    const weekly = [weeklyRow(2026, 8, 6, 'orphan quiz theme', 'Q?', ['X'], 'X')];
+    const groups = sandbox.groupSixDayCourse([], weekly);
+    assert.strictEqual(groups.length, 1);
+    assert.strictEqual(groups[0].theme, 'orphan quiz theme');
+    assert.strictEqual(Object.keys(groups[0].days).length, 0);
+    assert.strictEqual(groups[0].sundayQuestions.length, 1);
   });
 })();
 

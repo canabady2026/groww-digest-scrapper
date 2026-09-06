@@ -16,6 +16,10 @@
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   }
   header {
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 5;
     padding: 20px 16px 0;
     text-align: center;
   }
@@ -49,8 +53,27 @@
     color: #fff;
     border-color: var(--text);
   }
+  .search-wrap {
+    padding: 0 12px 14px;
+  }
+  .search-wrap input {
+    width: 100%;
+    max-width: 520px;
+    margin: 0 auto;
+    display: block;
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--card-bg);
+    font-size: 14px;
+    color: var(--text);
+  }
+  .search-wrap input:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: -1px;
+  }
   main {
-    max-width: 480px;
+    max-width: 720px;
     margin: 0 auto;
     padding: 8px 16px 32px;
   }
@@ -60,25 +83,195 @@
     padding: 60px 16px;
     font-size: 14px;
   }
-  .card {
+
+  /* Tiles (Word of the Day) */
+  .tile-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 12px;
+  }
+  .tile {
     background: var(--card-bg);
     border: 1px solid var(--border);
     border-radius: 14px;
-    padding: 24px 20px;
-    min-height: 260px;
+    padding: 16px 14px;
+    cursor: pointer;
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
   }
-  .card-date {
+  .tile-date {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin-bottom: 6px;
+  }
+  .tile-title {
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.3;
+    margin-bottom: 6px;
+  }
+  .tile-excerpt {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+
+  /* Plain lists (Featured Question, Story, 6 Day Course) */
+  .list { display: flex; flex-direction: column; gap: 10px; }
+  .list-item {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px 18px;
+    cursor: pointer;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  }
+  .list-item-date {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin-bottom: 6px;
+  }
+  .list-item-title {
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.35;
+    margin-bottom: 4px;
+  }
+  .list-item-excerpt {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.45;
+  }
+  .pill-row {
+    display: flex;
+    gap: 6px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+  .pill {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: var(--border);
+    color: var(--muted);
+  }
+  .pill.filled {
+    background: var(--accent-bg);
+    color: var(--accent);
+  }
+
+  /* Modal */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(30, 32, 40, 0.55);
     display: flex;
     align-items: center;
-    gap: 8px;
+    justify-content: center;
+    padding: 16px;
+    z-index: 20;
+  }
+  .modal {
+    background: var(--card-bg);
+    border-radius: 18px;
+    width: 100%;
+    max-width: 600px;
+    max-height: 88vh;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+  }
+  .modal-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: var(--bg);
     color: var(--muted);
-    font-size: 12px;
+    font-size: 20px;
+    cursor: pointer;
+    z-index: 1;
+  }
+  .modal-content {
+    overflow-y: auto;
+    padding: 32px 28px 12px;
+  }
+  .modal-date {
+    color: var(--muted);
+    font-size: 13px;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    margin-bottom: 12px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
+  .modal-title {
+    margin: 0 0 18px;
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+  .modal-lead {
+    font-style: italic;
+    color: var(--muted);
+    border-left: 4px solid var(--accent);
+    padding-left: 16px;
+    margin: 0 0 22px;
+    font-size: 19px;
+  }
+  .modal-body {
+    font-size: 19px;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    margin: 0;
+  }
+  .modal-callout {
+    margin-top: 22px;
+    background: var(--accent-bg);
+    border-radius: 12px;
+    padding: 18px 20px;
+  }
+  .modal-callout strong {
+    display: block;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+  .modal-callout p {
+    margin: 0;
+    font-size: 17px;
+    line-height: 1.6;
+  }
+  .modal-options { list-style: none; padding: 0; margin: 0 0 4px; }
+  .modal-options .option {
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 8px;
+    font-size: 17px;
+  }
+  .modal-options .option.correct {
+    border-color: var(--accent);
+    background: var(--accent-bg);
+    font-weight: 600;
+  }
+  .quiz-block { margin-bottom: 26px; }
+  .quiz-block:last-child { margin-bottom: 4px; }
+
   .badge {
     display: inline-block;
     background: var(--accent-bg);
@@ -90,85 +283,54 @@
     text-transform: none;
     letter-spacing: normal;
   }
-  .card-title {
-    margin: 0 0 12px;
-    font-size: 19px;
-    font-weight: 700;
-    line-height: 1.35;
+
+  .day-badges {
+    display: flex;
+    gap: 6px;
+    padding: 16px 28px 0;
+    flex-wrap: wrap;
   }
-  .card-lead {
-    font-style: italic;
-    color: var(--muted);
-    border-left: 3px solid var(--accent);
-    padding-left: 12px;
-    margin: 0 0 16px;
-  }
-  .card-body {
-    font-size: 15px;
-    line-height: 1.6;
-    white-space: pre-wrap;
-    margin: 0;
-  }
-  .callout {
-    margin-top: 18px;
-    background: var(--accent-bg);
+  .day-badge {
+    flex: 1 1 0;
+    min-width: 44px;
+    text-align: center;
+    padding: 8px 4px;
     border-radius: 10px;
-    padding: 14px 16px;
-  }
-  .callout strong {
-    display: block;
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--accent);
-    margin-bottom: 6px;
-  }
-  .callout p {
-    margin: 0;
-    font-size: 14px;
-    line-height: 1.55;
-  }
-  .options {
-    list-style: none;
-    padding: 0;
-    margin: 0 0 4px;
-  }
-  .options .option {
-    padding: 10px 12px;
     border: 1px solid var(--border);
-    border-radius: 10px;
-    margin-bottom: 8px;
-    font-size: 14px;
+    background: var(--bg);
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
   }
-  .options .option.correct {
-    border-color: var(--accent);
-    background: var(--accent-bg);
-    font-weight: 600;
+  .day-badge.active {
+    background: var(--text);
+    color: #fff;
+    border-color: var(--text);
   }
-  .nav {
+  .day-badge.empty {
+    opacity: 0.4;
+  }
+
+  .modal-nav {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-top: 16px;
+    padding: 10px 20px 18px;
     gap: 12px;
   }
-  .nav button {
+  .modal-nav button {
     flex: 0 0 auto;
     border: none;
     background: var(--text);
     color: #fff;
-    width: 44px;
-    height: 44px;
+    width: 42px;
+    height: 42px;
     border-radius: 50%;
     font-size: 18px;
     cursor: pointer;
   }
-  .nav button:disabled {
-    background: var(--border);
-    color: var(--muted);
-    cursor: default;
-  }
-  .nav .counter {
+  .modal-nav .counter {
     color: var(--muted);
     font-size: 13px;
     font-weight: 600;
@@ -178,27 +340,48 @@
 <header>
   <h1>Groww Digest</h1>
   <div class="tabs" id="tabs"></div>
+  <div class="search-wrap">
+    <input id="searchInput" type="search" placeholder="Search this tab…">
+  </div>
 </header>
 <main>
   <div id="content" class="status">Loading…</div>
-  <div class="nav" id="nav" hidden>
-    <button id="prevBtn" aria-label="Previous">‹</button>
-    <div class="counter" id="counter"></div>
-    <button id="nextBtn" aria-label="Next">›</button>
-  </div>
 </main>
 
+<div class="modal-overlay" id="modalOverlay" hidden>
+  <div class="modal">
+    <button class="modal-close" id="modalClose" aria-label="Close">&times;</button>
+    <div id="dayBadges" class="day-badges" hidden></div>
+    <div class="modal-content" id="modalContent"></div>
+    <div class="modal-nav">
+      <button id="modalPrev" aria-label="Previous">‹</button>
+      <div class="counter" id="modalCounter"></div>
+      <button id="modalNext" aria-label="Next">›</button>
+    </div>
+  </div>
+</div>
+
 <script>
+  var DAY_ORDER = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Sunday'];
+  var DAY_SHORT = { Monday: 'Mon', Tuesday: 'Tue', Wednesday: 'Wed', Thursday: 'Thu', Friday: 'Fri', Sunday: 'Sun' };
+
   var tabs = [];
   var activeTabKey = null;
   var dataCache = {};
-  var indexByTab = {};
+
+  var modalMode = null;      // 'list' | 'course'
+  var modalTabKey = null;
+  var modalList = [];        // list mode: the filtered items being browsed
+  var modalIndex = 0;
+  var modalCourseGroup = null; // course mode: the clicked week's group
 
   var contentEl = document.getElementById('content');
-  var navEl = document.getElementById('nav');
-  var counterEl = document.getElementById('counter');
-  var prevBtn = document.getElementById('prevBtn');
-  var nextBtn = document.getElementById('nextBtn');
+  var tabsEl = document.getElementById('tabs');
+  var searchInput = document.getElementById('searchInput');
+  var overlayEl = document.getElementById('modalOverlay');
+  var modalContentEl = document.getElementById('modalContent');
+  var dayBadgesEl = document.getElementById('dayBadges');
+  var modalCounterEl = document.getElementById('modalCounter');
 
   function esc(value) {
     return String(value == null ? '' : value)
@@ -207,55 +390,18 @@
       .replace(/>/g, '&gt;');
   }
 
-  function renderCard(sheetKey, row) {
-    switch (sheetKey) {
-      case 'WORD_OF_THE_DAY':
-        return '' +
-          '<div class="card-date">' + esc(row.date) + '</div>' +
-          '<h2 class="card-title">' + esc(row.word) + '</h2>' +
-          (row.short_description ? '<p class="card-lead">' + esc(row.short_description) + '</p>' : '') +
-          '<p class="card-body">' + esc(row.description) + '</p>';
-
-      case 'DAILY_SIX_DAY_COURSE':
-        return '' +
-          '<div class="card-date">' + esc(row.date) + (row.day ? ' <span class="badge">' + esc(row.day) + '</span>' : '') + '</div>' +
-          '<h2 class="card-title">' + esc(row.theme) + '</h2>' +
-          '<p class="card-body">' + esc(row.content) + '</p>';
-
-      case 'FEATURED_QUESTION':
-        return '' +
-          '<div class="card-date">' + esc(row.date) + '</div>' +
-          '<h2 class="card-title">Q. ' + esc(row.question) + '</h2>' +
-          '<p class="card-body">' + esc(row.answer) + '</p>';
-
-      case 'STORY':
-        return '' +
-          '<div class="card-date">' + esc(row.date) + '</div>' +
-          '<h2 class="card-title">' + esc(row.title) + '</h2>' +
-          '<p class="card-body">' + esc(row.content) + '</p>' +
-          (row.takeaway ? '<div class="callout"><strong>Takeaways</strong><p>' + esc(row.takeaway) + '</p></div>' : '');
-
-      case 'WEEKLY_SIX_DAY_COURSE':
-        var options = [1, 2, 3, 4, 5]
-          .map(function (n) { return row['option' + n]; })
-          .filter(function (opt) { return opt; });
-        var optionsHtml = options.map(function (opt) {
-          var isAnswer = String(opt).trim() === String(row.answer || '').trim();
-          return '<li class="option' + (isAnswer ? ' correct' : '') + '">' + esc(opt) + '</li>';
-        }).join('');
-        return '' +
-          '<div class="card-date">' + esc(row.date) + (row.theme ? ' <span class="badge">' + esc(row.theme) + '</span>' : '') + '</div>' +
-          '<h2 class="card-title">' + esc(row.question) + '</h2>' +
-          '<ul class="options">' + optionsHtml + '</ul>' +
-          '<div class="callout"><strong>Answer</strong><p>' + esc(row.answer) + '</p></div>';
-
-      default:
-        return '<p class="card-body">' + esc(JSON.stringify(row)) + '</p>';
-    }
+  function truncate(str, n) {
+    str = str || '';
+    return str.length > n ? str.slice(0, n).trim() + '…' : str;
   }
 
+  function currentTab() {
+    return tabs.filter(function (t) { return t.key === activeTabKey; })[0];
+  }
+
+  // ---------- Fetch + tab switching ----------
+
   function renderTabs() {
-    var tabsEl = document.getElementById('tabs');
     tabsEl.innerHTML = '';
     tabs.forEach(function (tab) {
       var btn = document.createElement('button');
@@ -270,71 +416,292 @@
     activeTabKey = key;
     renderTabs();
     if (dataCache[key]) {
-      renderCurrent();
-    } else {
-      contentEl.className = 'status';
-      contentEl.textContent = 'Loading…';
-      navEl.hidden = true;
-      google.script.run
-        .withSuccessHandler(function (rows) {
-          dataCache[key] = rows;
-          indexByTab[key] = 0;
-          renderCurrent();
-        })
-        .withFailureHandler(function (err) {
-          contentEl.className = 'status';
-          contentEl.textContent = 'Could not load this tab: ' + (err && err.message ? err.message : err);
-        })
-        .getDigestData(key);
+      renderActiveTab();
+      return;
     }
+    contentEl.className = 'status';
+    contentEl.textContent = 'Loading…';
+    var call = google.script.run
+      .withSuccessHandler(onTabLoaded(key))
+      .withFailureHandler(onTabLoadFailed);
+    if (key === 'SIX_DAY_COURSE') call.getSixDayCourseData();
+    else call.getDigestData(key);
   }
 
-  function renderCurrent() {
-    var rows = dataCache[activeTabKey] || [];
-    if (rows.length === 0) {
+  function onTabLoaded(key) {
+    return function (rows) {
+      dataCache[key] = rows;
+      if (key === activeTabKey) renderActiveTab();
+    };
+  }
+
+  function onTabLoadFailed(err) {
+    contentEl.className = 'status';
+    contentEl.textContent = 'Could not load this tab: ' + (err && err.message ? err.message : err);
+  }
+
+  searchInput.addEventListener('input', renderActiveTab);
+
+  // ---------- Search matching ----------
+
+  function matchesSearch(tabKey, item, term) {
+    if (!term) return true;
+    term = term.toLowerCase();
+    function has(v) { return v && String(v).toLowerCase().indexOf(term) !== -1; }
+
+    if (tabKey === 'WORD_OF_THE_DAY') {
+      return has(item.word) || has(item.short_description) || has(item.description);
+    }
+    if (tabKey === 'FEATURED_QUESTION') {
+      return has(item.question) || has(item.answer);
+    }
+    if (tabKey === 'STORY') {
+      return has(item.title) || has(item.content) || has(item.takeaway);
+    }
+    if (tabKey === 'SIX_DAY_COURSE') {
+      if (has(item.theme)) return true;
+      var dayMatch = Object.keys(item.days).some(function (d) {
+        return item.days[d] && has(item.days[d].content);
+      });
+      var quizMatch = item.sundayQuestions.some(function (q) {
+        return has(q.question) || has(q.answer);
+      });
+      return dayMatch || quizMatch;
+    }
+    return true;
+  }
+
+  // ---------- Rendering the active tab's tiles/list ----------
+
+  function renderActiveTab() {
+    var tab = currentTab();
+    if (!tab) return;
+    var raw = dataCache[activeTabKey] || [];
+    var term = searchInput.value.trim();
+    var filtered = raw.filter(function (item) { return matchesSearch(activeTabKey, item, term); });
+
+    if (filtered.length === 0) {
       contentEl.className = 'status';
-      contentEl.textContent = 'No entries yet for this tab.';
-      navEl.hidden = true;
+      contentEl.textContent = term ? 'No matches for “' + term + '”.' : 'No entries yet for this tab.';
       return;
     }
 
-    var i = indexByTab[activeTabKey] || 0;
-    contentEl.className = 'card';
-    contentEl.innerHTML = renderCard(activeTabKey, rows[i]);
+    if (tab.layout === 'tiles') renderTiles(filtered);
+    else if (tab.layout === 'list') renderPlainList(filtered);
+    else if (tab.layout === 'course') renderCourseList(filtered);
+  }
 
-    navEl.hidden = false;
-    counterEl.textContent = (i + 1) + ' / ' + rows.length;
-    prevBtn.disabled = i === 0;
-    nextBtn.disabled = i === rows.length - 1;
+  function renderTiles(items) {
+    contentEl.className = 'tile-grid';
+    contentEl.innerHTML = items.map(function (row, i) {
+      return '' +
+        '<div class="tile" data-i="' + i + '">' +
+        '<div class="tile-date">' + esc(row.date) + '</div>' +
+        '<div class="tile-title">' + esc(row.word) + '</div>' +
+        '<div class="tile-excerpt">' + esc(truncate(row.short_description, 70)) + '</div>' +
+        '</div>';
+    }).join('');
+    Array.prototype.forEach.call(contentEl.querySelectorAll('.tile'), function (el) {
+      el.onclick = function () { openListModal(activeTabKey, items, Number(el.dataset.i)); };
+    });
+  }
+
+  function renderPlainList(items) {
+    contentEl.className = 'list';
+    contentEl.innerHTML = items.map(function (row, i) {
+      var title = activeTabKey === 'STORY' ? row.title : ('Q. ' + row.question);
+      var excerpt = activeTabKey === 'STORY' ? row.content : row.answer;
+      return '' +
+        '<div class="list-item" data-i="' + i + '">' +
+        '<div class="list-item-date">' + esc(row.date) + '</div>' +
+        '<div class="list-item-title">' + esc(title) + '</div>' +
+        '<div class="list-item-excerpt">' + esc(truncate(excerpt, 140)) + '</div>' +
+        '</div>';
+    }).join('');
+    Array.prototype.forEach.call(contentEl.querySelectorAll('.list-item'), function (el) {
+      el.onclick = function () { openListModal(activeTabKey, items, Number(el.dataset.i)); };
+    });
+  }
+
+  function renderCourseList(groups) {
+    contentEl.className = 'list';
+    contentEl.innerHTML = groups.map(function (group, i) {
+      var pills = DAY_ORDER.map(function (day) {
+        var filled = day === 'Sunday' ? group.sundayQuestions.length > 0 : !!group.days[day];
+        return '<span class="pill' + (filled ? ' filled' : '') + '">' + DAY_SHORT[day] + '</span>';
+      }).join('');
+      return '' +
+        '<div class="list-item" data-i="' + i + '">' +
+        '<div class="list-item-date">Week ending ' + esc(group.weekLabel) + '</div>' +
+        '<div class="list-item-title">' + esc(group.theme || 'Untitled theme') + '</div>' +
+        '<div class="pill-row">' + pills + '</div>' +
+        '</div>';
+    }).join('');
+    Array.prototype.forEach.call(contentEl.querySelectorAll('.list-item'), function (el) {
+      el.onclick = function () { openCourseModal(groups[Number(el.dataset.i)]); };
+    });
+  }
+
+  // ---------- Modal: list mode (Word of the Day, Featured Question, Story) ----------
+
+  function openListModal(tabKey, list, index) {
+    modalMode = 'list';
+    modalTabKey = tabKey;
+    modalList = list;
+    modalIndex = index;
+    dayBadgesEl.hidden = true;
+    modalCounterEl.hidden = false;
+    showModal();
+    renderModal();
+  }
+
+  function renderListSlide() {
+    var row = modalList[modalIndex];
+    modalCounterEl.textContent = (modalIndex + 1) + ' / ' + modalList.length;
+
+    if (modalTabKey === 'WORD_OF_THE_DAY') {
+      modalContentEl.innerHTML = '' +
+        '<div class="modal-date">' + esc(row.date) + '</div>' +
+        '<h2 class="modal-title">' + esc(row.word) + '</h2>' +
+        (row.short_description ? '<p class="modal-lead">' + esc(row.short_description) + '</p>' : '') +
+        '<p class="modal-body">' + esc(row.description) + '</p>';
+    } else if (modalTabKey === 'FEATURED_QUESTION') {
+      modalContentEl.innerHTML = '' +
+        '<div class="modal-date">' + esc(row.date) + '</div>' +
+        '<h2 class="modal-title">Q. ' + esc(row.question) + '</h2>' +
+        '<p class="modal-body">' + esc(row.answer) + '</p>';
+    } else if (modalTabKey === 'STORY') {
+      modalContentEl.innerHTML = '' +
+        '<div class="modal-date">' + esc(row.date) + '</div>' +
+        '<h2 class="modal-title">' + esc(row.title) + '</h2>' +
+        '<p class="modal-body">' + esc(row.content) + '</p>' +
+        (row.takeaway ? '<div class="modal-callout"><strong>Takeaways</strong><p>' + esc(row.takeaway) + '</p></div>' : '');
+    }
+  }
+
+  // ---------- Modal: course mode (6 Day Course) ----------
+
+  function openCourseModal(group) {
+    modalMode = 'course';
+    modalCourseGroup = group;
+    var defaultIndex = DAY_ORDER.findIndex(function (day) {
+      return day !== 'Sunday' && group.days[day];
+    });
+    if (defaultIndex === -1) defaultIndex = DAY_ORDER.length - 1; // Sunday
+    modalIndex = defaultIndex;
+    dayBadgesEl.hidden = false;
+    modalCounterEl.hidden = true;
+    showModal();
+    renderModal();
+  }
+
+  function renderCourseSlide() {
+    var group = modalCourseGroup;
+    var dayName = DAY_ORDER[modalIndex];
+
+    dayBadgesEl.innerHTML = DAY_ORDER.map(function (day, i) {
+      var hasData = day === 'Sunday' ? group.sundayQuestions.length > 0 : !!group.days[day];
+      var classes = 'day-badge' + (i === modalIndex ? ' active' : '') + (hasData ? '' : ' empty');
+      return '<div class="' + classes + '" data-i="' + i + '">' + DAY_SHORT[day] + '</div>';
+    }).join('');
+    Array.prototype.forEach.call(dayBadgesEl.querySelectorAll('.day-badge'), function (el) {
+      el.onclick = function () { modalIndex = Number(el.dataset.i); renderModal(); };
+    });
+
+    if (dayName === 'Sunday') {
+      var questions = group.sundayQuestions;
+      if (questions.length === 0) {
+        modalContentEl.innerHTML = '' +
+          '<div class="modal-date">Week ending ' + esc(group.weekLabel) + ' <span class="badge">Sunday recap</span></div>' +
+          '<p class="modal-body">No weekly recap quiz captured for this week yet.</p>';
+      } else {
+        modalContentEl.innerHTML = '' +
+          '<div class="modal-date">Week ending ' + esc(group.weekLabel) + ' <span class="badge">Sunday recap</span></div>' +
+          '<h2 class="modal-title">' + esc(group.theme || 'Recap quiz') + '</h2>' +
+          questions.map(function (q) {
+            var optionsHtml = q.options.map(function (opt) {
+              var isAnswer = String(opt).trim() === String(q.answer || '').trim();
+              return '<li class="option' + (isAnswer ? ' correct' : '') + '">' + esc(opt) + '</li>';
+            }).join('');
+            return '' +
+              '<div class="quiz-block">' +
+              '<p class="modal-body"><strong>' + esc(q.question) + '</strong></p>' +
+              '<ul class="modal-options">' + optionsHtml + '</ul>' +
+              '<div class="modal-callout"><strong>Answer</strong><p>' + esc(q.answer) + '</p></div>' +
+              '</div>';
+          }).join('');
+      }
+    } else {
+      var row = group.days[dayName];
+      if (!row) {
+        modalContentEl.innerHTML = '' +
+          '<div class="modal-date">Week ending ' + esc(group.weekLabel) + ' <span class="badge">' + dayName + '</span></div>' +
+          '<h2 class="modal-title">' + esc(group.theme || 'Untitled theme') + '</h2>' +
+          '<p class="modal-body">No entry captured for ' + dayName + ' this week.</p>';
+      } else {
+        modalContentEl.innerHTML = '' +
+          '<div class="modal-date">' + esc(row.date) + ' <span class="badge">' + dayName + '</span></div>' +
+          '<h2 class="modal-title">' + esc(group.theme || 'Untitled theme') + '</h2>' +
+          '<p class="modal-body">' + esc(row.content) + '</p>';
+      }
+    }
+  }
+
+  // ---------- Shared modal shell ----------
+
+  function showModal() {
+    overlayEl.hidden = false;
+  }
+
+  function closeModal() {
+    overlayEl.hidden = true;
+    modalMode = null;
+    modalCourseGroup = null;
+  }
+
+  function renderModal() {
+    modalContentEl.scrollTop = 0;
+    if (modalMode === 'list') renderListSlide();
+    else if (modalMode === 'course') renderCourseSlide();
   }
 
   function step(delta) {
-    var rows = dataCache[activeTabKey] || [];
-    var i = (indexByTab[activeTabKey] || 0) + delta;
-    if (i < 0 || i >= rows.length) return;
-    indexByTab[activeTabKey] = i;
-    renderCurrent();
+    if (modalMode === 'list') {
+      modalIndex = (modalIndex + delta + modalList.length) % modalList.length;
+    } else if (modalMode === 'course') {
+      modalIndex = (modalIndex + delta + DAY_ORDER.length) % DAY_ORDER.length;
+    } else {
+      return;
+    }
+    renderModal();
   }
 
-  prevBtn.onclick = function () { step(-1); };
-  nextBtn.onclick = function () { step(1); };
+  document.getElementById('modalPrev').onclick = function () { step(-1); };
+  document.getElementById('modalNext').onclick = function () { step(1); };
+  document.getElementById('modalClose').onclick = closeModal;
+  overlayEl.addEventListener('click', function (e) {
+    if (e.target === overlayEl) closeModal();
+  });
 
   document.addEventListener('keydown', function (e) {
+    if (overlayEl.hidden) return;
+    if (e.key === 'Escape') closeModal();
     if (e.key === 'ArrowLeft') step(-1);
     if (e.key === 'ArrowRight') step(1);
   });
 
-  // Basic swipe support for mobile.
   var touchStartX = null;
-  document.addEventListener('touchstart', function (e) {
+  overlayEl.addEventListener('touchstart', function (e) {
     touchStartX = e.changedTouches[0].clientX;
   });
-  document.addEventListener('touchend', function (e) {
+  overlayEl.addEventListener('touchend', function (e) {
     if (touchStartX === null) return;
     var dx = e.changedTouches[0].clientX - touchStartX;
     if (Math.abs(dx) > 50) step(dx > 0 ? -1 : 1);
     touchStartX = null;
   });
+
+  // ---------- Boot ----------
 
   google.script.run
     .withSuccessHandler(function (result) {
@@ -342,6 +709,7 @@
       if (tabs.length > 0) selectTab(tabs[0].key);
     })
     .withFailureHandler(function (err) {
+      contentEl.className = 'status';
       contentEl.textContent = 'Could not load tabs: ' + (err && err.message ? err.message : err);
     })
     .getDigestTabs();
