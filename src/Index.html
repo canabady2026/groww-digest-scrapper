@@ -1,0 +1,348 @@
+<style>
+  :root {
+    --bg: #f5f7fb;
+    --card-bg: #ffffff;
+    --border: #e9e9eb;
+    --text: #33343f;
+    --muted: #7c7e8c;
+    --accent: #0abb91;
+    --accent-bg: #e6f8f3;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  }
+  header {
+    padding: 20px 16px 0;
+    text-align: center;
+  }
+  header h1 {
+    margin: 0 0 16px;
+    font-size: 22px;
+    font-weight: 600;
+  }
+  .tabs {
+    display: flex;
+    overflow-x: auto;
+    gap: 8px;
+    padding: 0 12px 12px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    flex: 0 0 auto;
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--card-bg);
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .tab.active {
+    background: var(--text);
+    color: #fff;
+    border-color: var(--text);
+  }
+  main {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 8px 16px 32px;
+  }
+  .status {
+    text-align: center;
+    color: var(--muted);
+    padding: 60px 16px;
+    font-size: 14px;
+  }
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px 20px;
+    min-height: 260px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  }
+  .card-date {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 12px;
+  }
+  .badge {
+    display: inline-block;
+    background: var(--accent-bg);
+    color: var(--accent);
+    border-radius: 999px;
+    padding: 2px 10px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: none;
+    letter-spacing: normal;
+  }
+  .card-title {
+    margin: 0 0 12px;
+    font-size: 19px;
+    font-weight: 700;
+    line-height: 1.35;
+  }
+  .card-lead {
+    font-style: italic;
+    color: var(--muted);
+    border-left: 3px solid var(--accent);
+    padding-left: 12px;
+    margin: 0 0 16px;
+  }
+  .card-body {
+    font-size: 15px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    margin: 0;
+  }
+  .callout {
+    margin-top: 18px;
+    background: var(--accent-bg);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .callout strong {
+    display: block;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+  .callout p {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.55;
+  }
+  .options {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 4px;
+  }
+  .options .option {
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 8px;
+    font-size: 14px;
+  }
+  .options .option.correct {
+    border-color: var(--accent);
+    background: var(--accent-bg);
+    font-weight: 600;
+  }
+  .nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 16px;
+    gap: 12px;
+  }
+  .nav button {
+    flex: 0 0 auto;
+    border: none;
+    background: var(--text);
+    color: #fff;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    font-size: 18px;
+    cursor: pointer;
+  }
+  .nav button:disabled {
+    background: var(--border);
+    color: var(--muted);
+    cursor: default;
+  }
+  .nav .counter {
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 600;
+  }
+</style>
+
+<header>
+  <h1>Groww Digest</h1>
+  <div class="tabs" id="tabs"></div>
+</header>
+<main>
+  <div id="content" class="status">Loading…</div>
+  <div class="nav" id="nav" hidden>
+    <button id="prevBtn" aria-label="Previous">‹</button>
+    <div class="counter" id="counter"></div>
+    <button id="nextBtn" aria-label="Next">›</button>
+  </div>
+</main>
+
+<script>
+  var tabs = [];
+  var activeTabKey = null;
+  var dataCache = {};
+  var indexByTab = {};
+
+  var contentEl = document.getElementById('content');
+  var navEl = document.getElementById('nav');
+  var counterEl = document.getElementById('counter');
+  var prevBtn = document.getElementById('prevBtn');
+  var nextBtn = document.getElementById('nextBtn');
+
+  function esc(value) {
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  function renderCard(sheetKey, row) {
+    switch (sheetKey) {
+      case 'WORD_OF_THE_DAY':
+        return '' +
+          '<div class="card-date">' + esc(row.date) + '</div>' +
+          '<h2 class="card-title">' + esc(row.word) + '</h2>' +
+          (row.short_description ? '<p class="card-lead">' + esc(row.short_description) + '</p>' : '') +
+          '<p class="card-body">' + esc(row.description) + '</p>';
+
+      case 'DAILY_SIX_DAY_COURSE':
+        return '' +
+          '<div class="card-date">' + esc(row.date) + (row.day ? ' <span class="badge">' + esc(row.day) + '</span>' : '') + '</div>' +
+          '<h2 class="card-title">' + esc(row.theme) + '</h2>' +
+          '<p class="card-body">' + esc(row.content) + '</p>';
+
+      case 'FEATURED_QUESTION':
+        return '' +
+          '<div class="card-date">' + esc(row.date) + '</div>' +
+          '<h2 class="card-title">Q. ' + esc(row.question) + '</h2>' +
+          '<p class="card-body">' + esc(row.answer) + '</p>';
+
+      case 'STORY':
+        return '' +
+          '<div class="card-date">' + esc(row.date) + '</div>' +
+          '<h2 class="card-title">' + esc(row.title) + '</h2>' +
+          '<p class="card-body">' + esc(row.content) + '</p>' +
+          (row.takeaway ? '<div class="callout"><strong>Takeaways</strong><p>' + esc(row.takeaway) + '</p></div>' : '');
+
+      case 'WEEKLY_SIX_DAY_COURSE':
+        var options = [1, 2, 3, 4, 5]
+          .map(function (n) { return row['option' + n]; })
+          .filter(function (opt) { return opt; });
+        var optionsHtml = options.map(function (opt) {
+          var isAnswer = String(opt).trim() === String(row.answer || '').trim();
+          return '<li class="option' + (isAnswer ? ' correct' : '') + '">' + esc(opt) + '</li>';
+        }).join('');
+        return '' +
+          '<div class="card-date">' + esc(row.date) + (row.theme ? ' <span class="badge">' + esc(row.theme) + '</span>' : '') + '</div>' +
+          '<h2 class="card-title">' + esc(row.question) + '</h2>' +
+          '<ul class="options">' + optionsHtml + '</ul>' +
+          '<div class="callout"><strong>Answer</strong><p>' + esc(row.answer) + '</p></div>';
+
+      default:
+        return '<p class="card-body">' + esc(JSON.stringify(row)) + '</p>';
+    }
+  }
+
+  function renderTabs() {
+    var tabsEl = document.getElementById('tabs');
+    tabsEl.innerHTML = '';
+    tabs.forEach(function (tab) {
+      var btn = document.createElement('button');
+      btn.className = 'tab' + (tab.key === activeTabKey ? ' active' : '');
+      btn.textContent = tab.label;
+      btn.onclick = function () { selectTab(tab.key); };
+      tabsEl.appendChild(btn);
+    });
+  }
+
+  function selectTab(key) {
+    activeTabKey = key;
+    renderTabs();
+    if (dataCache[key]) {
+      renderCurrent();
+    } else {
+      contentEl.className = 'status';
+      contentEl.textContent = 'Loading…';
+      navEl.hidden = true;
+      google.script.run
+        .withSuccessHandler(function (rows) {
+          dataCache[key] = rows;
+          indexByTab[key] = 0;
+          renderCurrent();
+        })
+        .withFailureHandler(function (err) {
+          contentEl.className = 'status';
+          contentEl.textContent = 'Could not load this tab: ' + (err && err.message ? err.message : err);
+        })
+        .getDigestData(key);
+    }
+  }
+
+  function renderCurrent() {
+    var rows = dataCache[activeTabKey] || [];
+    if (rows.length === 0) {
+      contentEl.className = 'status';
+      contentEl.textContent = 'No entries yet for this tab.';
+      navEl.hidden = true;
+      return;
+    }
+
+    var i = indexByTab[activeTabKey] || 0;
+    contentEl.className = 'card';
+    contentEl.innerHTML = renderCard(activeTabKey, rows[i]);
+
+    navEl.hidden = false;
+    counterEl.textContent = (i + 1) + ' / ' + rows.length;
+    prevBtn.disabled = i === 0;
+    nextBtn.disabled = i === rows.length - 1;
+  }
+
+  function step(delta) {
+    var rows = dataCache[activeTabKey] || [];
+    var i = (indexByTab[activeTabKey] || 0) + delta;
+    if (i < 0 || i >= rows.length) return;
+    indexByTab[activeTabKey] = i;
+    renderCurrent();
+  }
+
+  prevBtn.onclick = function () { step(-1); };
+  nextBtn.onclick = function () { step(1); };
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowLeft') step(-1);
+    if (e.key === 'ArrowRight') step(1);
+  });
+
+  // Basic swipe support for mobile.
+  var touchStartX = null;
+  document.addEventListener('touchstart', function (e) {
+    touchStartX = e.changedTouches[0].clientX;
+  });
+  document.addEventListener('touchend', function (e) {
+    if (touchStartX === null) return;
+    var dx = e.changedTouches[0].clientX - touchStartX;
+    if (Math.abs(dx) > 50) step(dx > 0 ? -1 : 1);
+    touchStartX = null;
+  });
+
+  google.script.run
+    .withSuccessHandler(function (result) {
+      tabs = result;
+      if (tabs.length > 0) selectTab(tabs[0].key);
+    })
+    .withFailureHandler(function (err) {
+      contentEl.textContent = 'Could not load tabs: ' + (err && err.message ? err.message : err);
+    })
+    .getDigestTabs();
+</script>

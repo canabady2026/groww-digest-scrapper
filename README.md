@@ -53,6 +53,9 @@ above are captured, per the spec.
   `createDailyTrigger()` helpers.
 - `src/Config.gs` — label names, sheet names/columns, and the
   batching/runtime settings, all in one place.
+- `src/WebApp.gs` / `src/Index.html` — a read-only web app for browsing
+  the scraped data as swipeable cards, one tab per sheet (see
+  [Browsing the data as a web app](#browsing-the-data-as-a-web-app)).
 
 Each Gmail **thread** is labeled `groww-digest-processed` once its
 messages have been scraped, and the search query used to find new
@@ -133,6 +136,41 @@ corrected data:
 Skipping step 1 will duplicate every row that was already captured
 correctly, since `resetProcessedLabel()` has no way to know which rows in
 the sheet came from which thread.
+
+## Browsing the data as a web app
+
+`src/WebApp.gs` + `src/Index.html` serve a small read-only page with one
+tab per sheet, and cards you browse with ‹ › buttons, arrow keys, or a
+swipe (newest first, like flipping through your inbox).
+
+To deploy it:
+
+1. In the Apps Script editor: **Deploy > New deployment**.
+2. Click the gear icon next to "Select type" and choose **Web app**.
+3. Set **Execute as: Me**, **Who has access: Only myself** (change this
+   later if you want to share the link — "Only myself" just means it
+   checks your Google identity, so it still works from your phone or any
+   other device as long as you're signed into the same account).
+4. Click **Deploy**, then copy the web app URL it gives you.
+
+Or, with clasp already set up (see Setup above):
+```
+clasp deploy --description "Groww Digest browser web app"
+clasp deployments   # lists the deployment ID
+```
+The URL is `https://script.google.com/macros/s/<deploymentId>/exec`.
+
+**Important:** redeploying only takes effect for the *web app*, not for
+scraping. Editing `src/WebApp.gs` or `src/Index.html` and running
+`clasp push` updates the underlying script, but the live web app URL
+keeps serving whatever was there at the last `clasp deploy` (or the last
+"New deployment"/"Manage deployments > Edit" in the UI) until you deploy
+again:
+```
+clasp deploy -i <deploymentId> -d "description of the update"
+```
+This is intentional Apps Script behavior — it means a code change never
+changes what's live until you explicitly redeploy.
 
 ## Testing
 
