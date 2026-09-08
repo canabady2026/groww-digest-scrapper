@@ -17,13 +17,32 @@ function parseDailyDigest(html, fallbackDate) {
     featuredQuestion: null
   };
 
+  // Each heading is searched independently from the start of the email,
+  // not assuming any fixed order relative to the others -- Groww has
+  // used more than one section ordering across the life of this digest
+  // (confirmed via debugHeadingVariants: "Featured Question" exists as
+  // an exact heading line in the large majority of real emails, yet
+  // chaining search positions sequentially -- searching for it only
+  // after wherever "6 Day Course" was found -- missed it in every
+  // single one, because in most of the backlog it actually comes
+  // *before* "6 Day Course").
   var wodIdx = findLineIndex(lines, 'Word of the Day', 0, false);
-  var sixIdx = findLineIndex(lines, '6 Day Course', wodIdx >= 0 ? wodIdx : 0, false);
-  var fqIdx = findLineIndex(lines, 'Featured Question', sixIdx >= 0 ? sixIdx : 0, false);
+  var sixIdx = findLineIndex(lines, '6 Day Course', 0, false);
+  var fqIdx = findLineIndex(lines, 'Featured Question', 0, false);
+
+  var headingIndexes = [wodIdx, sixIdx, fqIdx]
+    .filter(function (i) { return i !== -1; })
+    .sort(function (a, b) { return a - b; });
+
+  function nextHeadingAfter_(idx) {
+    for (var i = 0; i < headingIndexes.length; i++) {
+      if (headingIndexes[i] > idx) return headingIndexes[i];
+    }
+    return lines.length;
+  }
 
   if (wodIdx !== -1) {
-    var wodEnd = sixIdx !== -1 ? sixIdx : lines.length;
-    var wodLines = filterNoiseLines_(lines.slice(wodIdx + 1, wodEnd));
+    var wodLines = filterNoiseLines_(lines.slice(wodIdx + 1, nextHeadingAfter_(wodIdx)));
     if (wodLines.length > 0) {
       result.wordOfTheDay = {
         word: wodLines[0] || '',
@@ -34,8 +53,7 @@ function parseDailyDigest(html, fallbackDate) {
   }
 
   if (sixIdx !== -1) {
-    var sixEnd = fqIdx !== -1 ? fqIdx : lines.length;
-    var sixLinesRaw = lines.slice(sixIdx + 1, sixEnd);
+    var sixLinesRaw = lines.slice(sixIdx + 1, nextHeadingAfter_(sixIdx));
 
     var theme = '';
     var day = '';
@@ -68,12 +86,12 @@ function parseDailyDigest(html, fallbackDate) {
   }
 
   if (fqIdx !== -1) {
-    var endCandidates = [];
+    var endCandidates = [nextHeadingAfter_(fqIdx)];
     var disclaimerIdx = findLineIndex(lines, "we'll try to answer one burning question", fqIdx + 1, true);
     if (disclaimerIdx !== -1) endCandidates.push(disclaimerIdx);
     var diveDeeperIdx = findLineIndex(lines, 'Dive Deeper', fqIdx + 1, false);
     if (diveDeeperIdx !== -1) endCandidates.push(diveDeeperIdx);
-    var fqEnd = endCandidates.length > 0 ? Math.min.apply(null, endCandidates) : lines.length;
+    var fqEnd = Math.min.apply(null, endCandidates);
 
     var fqLines = filterNoiseLines_(lines.slice(fqIdx + 1, fqEnd));
     if (fqLines.length > 0) {

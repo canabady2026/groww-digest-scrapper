@@ -87,6 +87,48 @@ console.log('Daily digest parser');
   });
 })();
 
+console.log('Daily digest parser (section order independence)');
+(function () {
+  // Regression test for a real production bug: the parser used to
+  // search for "6 Day Course" only after "Word of the Day", then
+  // "Featured Question" only after wherever "6 Day Course" landed --
+  // assuming a fixed section order. Most real Groww daily digests
+  // actually put Featured Question *before* 6 Day Course, which made
+  // that chained search miss it in effectively every real email even
+  // though the heading was right there in the text. Each heading must
+  // be found independently regardless of order.
+  const reordered = `
+    <div>Featured Question</div>
+    <p>Q. Why does this order test exist?</p>
+    <p>Because Groww doesn't always put sections in the same order.</p>
+    <div>Word of the Day</div>
+    <p>Reordering</p>
+    <p>Testing a word.</p>
+    <p>A longer description of the word.</p>
+    <div>6 Day Course</div>
+    <p>Theme: order independence</p>
+    <!--Monday Start-->
+    <div>Mon</div>
+    <!--Monday End-->
+    <p>Course content for the day.</p>
+  `;
+  const result = sandbox.parseDailyDigest(reordered, new Date(2026, 0, 1));
+
+  test('finds Featured Question even when it appears before 6 Day Course', () => {
+    assert.ok(result.featuredQuestion, 'expected featuredQuestion to be present');
+    assert.strictEqual(result.featuredQuestion.question, "Why does this order test exist?");
+    assert.ok(result.featuredQuestion.answer.indexOf("doesn't always put sections") !== -1);
+  });
+
+  test('still finds Word of the Day and 6 Day Course in this order', () => {
+    assert.ok(result.wordOfTheDay, 'expected wordOfTheDay to be present');
+    assert.strictEqual(result.wordOfTheDay.word, 'Reordering');
+    assert.ok(result.sixDayCourse, 'expected sixDayCourse to be present');
+    assert.strictEqual(result.sixDayCourse.theme, 'order independence');
+    assert.strictEqual(result.sixDayCourse.day, 'Monday');
+  });
+})();
+
 console.log('Weekly digest parser');
 (function () {
   const html = readFixture('weekly-2026-08-30.html');
